@@ -210,6 +210,53 @@
       transition: width 0.24s ease;
     }
 
+    .fullscreen-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 7;
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(220, 170, 63, 0.94);
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.36);
+      transition: transform 0.15s ease, filter 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .fullscreen-btn::before {
+      content: "";
+      width: 14px;
+      height: 14px;
+      border: 2px solid #000;
+      border-radius: 2px;
+    }
+
+    .fullscreen-btn:hover {
+      filter: brightness(1.08);
+      box-shadow:
+        0 0 0 3px rgba(220, 170, 63, 0.2),
+        0 10px 24px rgba(0, 0, 0, 0.42);
+    }
+
+    .fullscreen-btn:active {
+      transform: translateY(1px);
+    }
+
+    .stage:fullscreen {
+      width: 100vw;
+      height: 100vh;
+      border: 0;
+      border-radius: 0;
+    }
+
+    .stage:fullscreen .page {
+      padding: 12px;
+    }
+
     @media (max-width: 860px) {
       .comic-app {
         padding: 12px;
@@ -238,6 +285,13 @@
         right: 8px;
       }
 
+      .fullscreen-btn {
+        top: 10px;
+        right: 10px;
+        width: 32px;
+        height: 32px;
+      }
+
     }
 
     @media (max-width: 560px) {
@@ -263,6 +317,16 @@
         border-bottom-width: 10px;
         border-left-width: 15px;
       }
+
+      .fullscreen-btn {
+        width: 30px;
+        height: 30px;
+      }
+
+      .fullscreen-btn::before {
+        width: 12px;
+        height: 12px;
+      }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -280,6 +344,7 @@
   <main class="comic-app" aria-label="Интерактивный комикс">
     <section class="reader">
       <div class="stage" id="stage" tabindex="0" aria-live="polite">
+        <button class="fullscreen-btn" type="button" id="fullscreenBtn" aria-label="На весь экран" title="На весь экран"></button>
         <button class="page-btn prev" type="button" id="prevBtn" aria-label="Предыдущая страница"></button>
         <div id="pages"></div>
         <button class="page-btn next" type="button" id="nextBtn" aria-label="Следующая страница"></button>
@@ -301,6 +366,7 @@
     const progressFill = document.querySelector("#progressFill");
     const prevBtn = document.querySelector("#prevBtn");
     const nextBtn = document.querySelector("#nextBtn");
+    const fullscreenBtn = document.querySelector("#fullscreenBtn");
 
     let current = 0;
     let pointerStartX = 0;
@@ -377,6 +443,21 @@
 
     prevBtn.addEventListener("click", prev);
     nextBtn.addEventListener("click", next);
+
+    fullscreenBtn.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      if (!document.fullscreenElement) {
+        await stage.requestFullscreen?.();
+      } else {
+        await document.exitFullscreen?.();
+      }
+    });
+
+    document.addEventListener("fullscreenchange", () => {
+      const isFullscreen = document.fullscreenElement === stage;
+      fullscreenBtn.setAttribute("aria-label", isFullscreen ? "Выйти из полноэкранного режима" : "На весь экран");
+      fullscreenBtn.title = isFullscreen ? "Выйти из полноэкранного режима" : "На весь экран";
+    });
 
     stage.addEventListener("click", (event) => {
       if (event.target.closest("button")) return;
