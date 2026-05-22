@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Комикс</title>
+  <style>
+    :root {
+      --bg: #10131a;
+      --surface: #171b24;
+      --surface-2: #202633;
+      --ink: #f7f2e8;
+      --muted: #b9c0cf;
+      --line: rgba(255, 255, 255, 0.14);
+      --accent: #ffcf5a;
+      --accent-2: #62d2c6;
+      --danger: #ff7d68;
+      --shadow: 0 22px 70px rgba(0, 0, 0, 0.38);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #000;
+      font-family: Inter, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      letter-spacing: 0;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .comic-app {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+    }
+
+    .page-btn {
+      border: 0;
+      color: #000;
+      background: #DCAA3F;
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+    }
+
+    .page-btn:hover {
+      filter: brightness(1.08);
+      box-shadow:
+        0 0 0 3px rgba(220, 170, 63, 0.22),
+        0 12px 30px rgba(0, 0, 0, 0.42);
+    }
+
+    .page-btn:active {
+      transform: translateY(1px);
+    }
+
+    .reader {
+      position: relative;
+      width: min(1400px, 100%);
+      min-height: 0;
+      margin: 0 auto;
+      display: grid;
+      place-items: center;
+    }
+
+    .stage {
+      position: relative;
+      width: 100%;
+      height: 820px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #000;
+      box-shadow: var(--shadow);
+      isolation: isolate;
+      touch-action: pan-y;
+    }
+
+    .page {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(10px, 2vw, 22px);
+      opacity: 0;
+      transform: translateX(5%);
+      pointer-events: none;
+      transition: opacity 0.28s ease, transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .page.is-active {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: auto;
+      z-index: 2;
+    }
+
+    .page.is-leaving-left {
+      transform: translateX(-5%);
+    }
+
+    .page.is-entering-left {
+      transform: translateX(-5%);
+    }
+
+    .page img {
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+      object-fit: contain;
+      border-radius: 4px;
+      box-shadow: 0 12px 34px rgba(0, 0, 0, 0.28);
+      user-select: none;
+      -webkit-user-drag: none;
+      background: #fff;
+    }
+
+    .page-error {
+      width: min(560px, 100%);
+      padding: 22px;
+      border: 1px dashed rgba(255, 255, 255, 0.28);
+      border-radius: var(--radius);
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.06);
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .page-error strong {
+      display: block;
+      color: var(--danger);
+      margin-bottom: 6px;
+    }
+
+    .page-btn {
+      position: absolute;
+      top: 50%;
+      z-index: 5;
+      width: 58px;
+      height: 58px;
+      margin-top: -29px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.38);
+    }
+
+    .page-btn::before {
+      content: "";
+      display: block;
+      width: 0;
+      height: 0;
+    }
+
+    .page-btn:disabled {
+      opacity: 0.32;
+      cursor: default;
+      transform: none;
+    }
+
+    .page-btn.prev {
+      left: 14px;
+    }
+
+    .page-btn.prev::before {
+      border-top: 12px solid transparent;
+      border-bottom: 12px solid transparent;
+      border-right: 18px solid #000;
+      margin-left: -3px;
+    }
+
+    .page-btn.next {
+      right: 14px;
+    }
+
+    .page-btn.next::before {
+      border-top: 12px solid transparent;
+      border-bottom: 12px solid transparent;
+      border-left: 18px solid #000;
+      margin-right: -3px;
+    }
+
+    .progress {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.12);
+      z-index: 6;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 25%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      transition: width 0.24s ease;
+    }
+
+    @media (max-width: 860px) {
+      .comic-app {
+        padding: 12px;
+      }
+
+      .stage {
+        height: min(820px, calc(100vh - 24px));
+        min-height: 380px;
+      }
+
+      .page {
+        padding: 8px;
+      }
+
+      .page-btn {
+        width: 50px;
+        height: 50px;
+        margin-top: -25px;
+      }
+
+      .page-btn.prev {
+        left: 8px;
+      }
+
+      .page-btn.next {
+        right: 8px;
+      }
+
+    }
+
+    @media (max-width: 560px) {
+      .stage {
+        height: min(820px, calc(100vh - 24px));
+        min-height: 360px;
+      }
+
+      .page-btn {
+        width: 44px;
+        height: 44px;
+        margin-top: -22px;
+      }
+
+      .page-btn.prev::before {
+        border-top-width: 10px;
+        border-bottom-width: 10px;
+        border-right-width: 15px;
+      }
+
+      .page-btn.next::before {
+        border-top-width: 10px;
+        border-bottom-width: 10px;
+        border-left-width: 15px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="comic-app" aria-label="Интерактивный комикс">
+    <section class="reader">
+      <div class="stage" id="stage" tabindex="0" aria-live="polite">
+        <button class="page-btn prev" type="button" id="prevBtn" aria-label="Предыдущая страница"></button>
+        <div id="pages"></div>
+        <button class="page-btn next" type="button" id="nextBtn" aria-label="Следующая страница"></button>
+        <div class="progress" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const pages = [
+      { title: "Обложка", src: "Обложка.png" },
+      { title: "Страница 1", src: "Page1.png" },
+      { title: "Страница 2", src: "Page2.png" },
+      { title: "Страница 3", src: "Page3.png" },
+      { title: "Страница 4", src: "Page4.png" },
+      { title: "Страница 5", src: "Page5.png" },
+      { title: "Страница 6", src: "Page6.png" },
+      { title: "Страница 7", src: "Page7.png" },
+      { title: "Страница 8", src: "Page8.png" },
+      { title: "Страница 9", src: "Page9.png" },
+      { title: "Страница 10", src: "Page10.png" },
+      { title: "Страница 11", src: "Page11.png" },
+      { title: "Страница 12", src: "Page12.png" }
+    ];
+
+    const stage = document.querySelector("#stage");
+    const pagesRoot = document.querySelector("#pages");
+    const progressFill = document.querySelector("#progressFill");
+    const prevBtn = document.querySelector("#prevBtn");
+    const nextBtn = document.querySelector("#nextBtn");
+
+    let current = 0;
+    let pointerStartX = 0;
+    let pointerStartY = 0;
+
+    function createPage(page, index) {
+      const frame = document.createElement("figure");
+      frame.className = "page";
+      frame.setAttribute("aria-label", page.title);
+
+      const img = document.createElement("img");
+      img.src = page.src;
+      img.alt = page.title;
+      img.decoding = "async";
+      img.loading = index === 0 ? "eager" : "lazy";
+      img.addEventListener("error", () => {
+        frame.innerHTML = `
+          <div class="page-error">
+            <strong>Не удалось загрузить изображение</strong>
+            Проверьте, что файл ${page.src} лежит рядом с index.html.
+          </div>
+        `;
+      });
+
+      frame.append(img);
+      return frame;
+    }
+
+    function render() {
+      pages.forEach((page, index) => {
+        pagesRoot.append(createPage(page, index));
+      });
+      update(0);
+      preload();
+    }
+
+    function update(previous) {
+      const frames = Array.from(document.querySelectorAll(".page"));
+      const direction = current >= previous ? "right" : "left";
+
+      frames.forEach((frame, index) => {
+        frame.classList.toggle("is-active", index === current);
+        frame.classList.toggle("is-entering-left", direction === "left" && index === current);
+        frame.classList.toggle("is-leaving-left", direction === "left" && index === previous);
+      });
+
+      progressFill.style.width = `${((current + 1) / pages.length) * 100}%`;
+      prevBtn.disabled = current === 0;
+      nextBtn.disabled = current === pages.length - 1;
+    }
+
+    function goTo(index) {
+      const next = Math.max(0, Math.min(index, pages.length - 1));
+      if (next === current) return;
+      const previous = current;
+      current = next;
+      update(previous);
+    }
+
+    function next() {
+      goTo(current + 1);
+    }
+
+    function prev() {
+      goTo(current - 1);
+    }
+
+    function preload() {
+      pages.slice(1).forEach((page) => {
+        const img = new Image();
+        img.src = page.src;
+      });
+    }
+
+    prevBtn.addEventListener("click", prev);
+    nextBtn.addEventListener("click", next);
+
+    stage.addEventListener("click", (event) => {
+      if (event.target.closest("button")) return;
+      next();
+    });
+
+    stage.addEventListener("pointerdown", (event) => {
+      pointerStartX = event.clientX;
+      pointerStartY = event.clientY;
+    });
+
+    stage.addEventListener("pointerup", (event) => {
+      const diffX = event.clientX - pointerStartX;
+      const diffY = event.clientY - pointerStartY;
+      if (Math.abs(diffX) < 44 || Math.abs(diffX) < Math.abs(diffY)) return;
+      if (diffX < 0) next();
+      if (diffX > 0) prev();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowRight" || event.key === " ") {
+        event.preventDefault();
+        next();
+      }
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        prev();
+      }
+      if (event.key === "Home") {
+        event.preventDefault();
+        goTo(0);
+      }
+      if (event.key === "End") {
+        event.preventDefault();
+        goTo(pages.length - 1);
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>
